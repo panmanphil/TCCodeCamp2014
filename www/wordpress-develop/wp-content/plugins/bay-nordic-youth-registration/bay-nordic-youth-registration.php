@@ -30,39 +30,58 @@ function bnyouthform_func( $atts ){
 	$context = stream_context_create($opts);
 
 	// Open the file using the HTTP headers set above
-	$id = '1e12acf5-bb68-490a-9b13-a1b9b3b78b09';
-	$host = "http://bnapi.local";
+	$host = "http://10.0.2.2";
 	$file = file_get_contents("$host/api", false, $context);
 	$root = json_decode($file, true);
 	$links = $root['_links'];
-	$registerLink = $links['bn:registration'];
-	if (isset($registerLink)) {
-		$registerLink = $registerLink['href'];
-		$registerLink = str_replace('{id}', '', $registerLink);
-	}
+	
 	
 	if (isset($_POST['bnSubmit'])) {
-		$opts = array(
-			'http' => array(
-				'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-				'method'  => 'POST',
-				'content' => http_build_query($_POST),
-			),
-		);
+		if (isset($links['bn:register'])) {
+			$registerLink = $links['bn:register'];
+			$link = $registerLink['href'];
+			$link = str_replace('{id}', '', $link);
+		
+			$opts = array(
+				'http' => array(
+					'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+					'method'  => 'POST',
+					'content' => http_build_query($_POST),
+				),
+			);
 
-		$context  = stream_context_create($opts);
-		$result = file_get_contents("$host/$registerLink", false, $context);
+			$context  = stream_context_create($opts);
+			$result = file_get_contents("$host/$link", false, $context);
 
-		$vars = var_dump($result);
-		return $vars . '<h2>Registration Successful</h2>';
+			//$vars = var_dump($result);
+			return '<h2>Registration Successful</h2>';
+		} else {
+			$output = '<h2>Registration is temporarily not available</h2>';
+			return $output;
+		}
 	}
-	$formsLink = $links["bn:registration-form"]["href"];
-	$file = file_get_contents("$host/$formsLink", false, $context);
-	$registrations = json_decode($file);
-	$output = "<div class='registration'>";
-	
-	$output .= $file;
-	$output .= "</div>";
-	return $output;
+	if (isset($links["bn:registration-form"])) {
+		$formsLink = $links["bn:registration-form"];
+		$link = $formsLink['href'];
+		$file = file_get_contents("$host/$link", false, $context);
+		global $post;
+		$action = get_permalink( $post->ID );
+		$file = str_replace('FORM_ACTION', $action, $file);
+		$output = "<div class='registration'>";
+		
+		$output .= $file;
+		$output .= "</div>";
+		return $output;
+	}
+	if (isset($links["bn:closed"])) {
+		$closedLink = $links["bn:closed"];
+		$link = $closedLink['href'];
+		$file = file_get_contents("$host/$link", false, $context);
+		$output = "<div class='closed'>";
+		
+		$output .= $file;
+		$output .= "</div>";
+		return $output;
+	}
 }
 add_shortcode( 'bnyouthform', 'bnyouthform_func' );
